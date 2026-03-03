@@ -7,7 +7,7 @@
 #include <FL/Fl_Box.H>
 #include <fstream>
 #include <vector>
-#include "ieee-c.h" // GPIB header
+#include "IEEE-C.H" // GPIB header
 
 // Global UI Elements
 Fl_Input       *file_input;
