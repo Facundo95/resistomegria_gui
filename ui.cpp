@@ -22,15 +22,15 @@ LabInterface::LabInterface(Measurement* meas) : engine(meas) {
     // Connect the button to the callback, passing 'this' (the UI) as data
     start_btn->callback(start_stop_cb, this);
 
-    // Resistance vs Time Chart
-    res_time_chart = new Fl_Grid_Chart(50, 80, 700, 180, "Resistance vs Time");
-    res_time_chart->type(FL_LINE_CHART);
-    res_time_chart->color(FL_WHITE);
+    res_time_chart = new SimplePlot(80, 80, 670, 180, "Resistencia vs Tiempo");
+    res_time_chart->set_bounds(0, 150);
+    res_time_chart->set_line_color(FL_BLUE);
+    res_time_chart->align(FL_ALIGN_TOP);
 
-    // Resistance vs Temperature Chart
-    res_temp_chart = new Fl_Grid_Chart(50, 300, 700, 180, "Resistance vs Temperature");
-    res_temp_chart->type(FL_LINE_CHART);
-    res_temp_chart->color(FL_WHITE);
+    res_temp_chart = new SimplePlot(80, 80, 670, 180, "Resistencia vs Tiempo");
+    res_temp_chart->set_bounds(0, 150);
+    res_temp_chart->set_line_color(FL_BLUE);
+    res_temp_chart->align(FL_ALIGN_TOP);
 
     win->end();
 }
@@ -76,8 +76,8 @@ void timer_cb(void* data) {
     MeasurementData d = meas->nextStep();
 
     // Update the visual charts
-    ui->res_time_chart->add(d.resistance, NULL, FL_BLUE);
-    ui->res_temp_chart->add(d.resistance, NULL, FL_RED);
+    ui->res_time_chart->add_point(d.resistance);
+    ui->res_temp_chart->add_point(d.resistance);
 
     // Force redraw to show new points
     ui->res_time_chart->redraw();
