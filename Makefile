@@ -1,48 +1,43 @@
 # --- COMPILER SETTINGS ---
-# Cross-compiler for Windows 32-bit (XP compatible)
 CXX = i686-w64-mingw32-g++
 
-# --- PATHS ---
-# We assume FLTK headers are in ./FL and libraries in ./lib
+# --- PATHS & BITS ---
 INCLUDES = -I. 
 LIB_PATHS = -L./lib -L.
-
-# --- LIBRARIES ---
-# Order matters for the linker! 
-# 1. Your specific GPIB lib
-# 2. FLTK core
-# 3. Windows system libs required by FLTK
 LIBS = -lieee_32m -lfltk -lole32 -luuid -lcomctl32 -lgdi32 -lws2_32
 
-# --- COMPILER FLAGS ---
-# -O2: Optimization
-# -Wall: Show all warnings
-# -static-libgcc -static-libstdc++: Includes runtimes so XP doesn't need extra DLLs
+# --- COMPILER & LINKER FLAGS ---
+# Keep the Windows XP compatibility flags
 CXXFLAGS = -O2 -Wall $(INCLUDES) -static-libgcc -static-libstdc++
-
-# --- LINKER FLAGS ---
-# -mwindows: Creates a GUI app (no black console window)
-# -static: Links everything statically for maximum XP portability
-# -Wl,--subsystem,windows:5.1: Forces the EXE to identify as Windows XP compatible
 LDFLAGS = -mwindows -static -Wl,--subsystem,windows:5.1 $(LIB_PATHS) $(LIBS)
 
-# --- TARGETS ---
+# --- TARGETS & SOURCE FILES ---
 TARGET = resistometry.exe
-SRC = main.cpp
+
+# List all your .cpp files here
+SRCS = main.cpp measurement.cpp ui.cpp
+
+# This automatically creates a list of .o files from your .cpp files
+OBJS = $(SRCS:.cpp=.o)
+
+# --- BUILD RULES ---
 
 all: $(TARGET)
 
-$(TARGET): $(SRC)
-	$(CXX) $(SRC) $(CXXFLAGS) -o $(TARGET) $(LDFLAGS)
+# Link the object files into the final executable
+$(TARGET): $(OBJS)
+	$(CXX) $(OBJS) -o $(TARGET) $(LDFLAGS)
+
+# Rule to compile .cpp files into .o files
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # --- CLEAN METHODS ---
 
-# 1. Basic Clean: Removes the executable and object files
 clean:
 	@echo "Cleaning up build artifacts..."
 	rm -f $(TARGET) $(OBJS)
 
-# 2. Total Clean: Removes build files plus any data files generated during tests
 distclean: clean
 	@echo "Removing generated data and logs..."
 	rm -f *.txt *.log *.csv
