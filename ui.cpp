@@ -2,33 +2,39 @@
 #include <iostream>
 #include <cstdio>
 #include <FL/fl_draw.H>
+#include <FL/fl_ask.H> // Required for fl_message
 
 // Constructor: Setup the layout and widgets
 LabInterface::LabInterface(Measurement* meas) : engine(meas) {
     win = new Fl_Window(800, 500, "Resistometry Lab - XP Edition");
 
     // File Input
-    file_input = new Fl_Input(120, 20, 150, 30, "Filename:");
+    file_input = new Fl_Input(80, 20, 150, 30, "Filename:");
     file_input->value("data_log.csv");
 
     // Interval Input
-    time_input = new Fl_Value_Input(400, 20, 50, 30, "Interval (s):");
+    time_input = new Fl_Value_Input(310, 20, 50, 30, "Interval (s):");
     time_input->value(1.0);
 
-    // Start/Stop Button
-    start_btn = new Fl_Button(600, 20, 100, 30, "START");
+    // Start/Continue Button
+    start_btn = new Fl_Button(440, 20, 100, 30, "START");
     start_btn->color(FL_GREEN);
     
     // Connect the button to the callback, passing 'this' (the UI) as data
-    start_btn->callback(start_stop_cb, this);
+    start_btn->callback(start_continue_cb, this);
 
-    res_time_chart = new SimplePlot(80, 80, 670, 180, "Resistencia vs Tiempo");
-    res_time_chart->set_bounds(0, 150);
+    stop_btn = new Fl_Button(620, 20, 100, 30, "STOP");
+    stop_btn->color(FL_RED);
+    stop_btn->deactivate();
+    stop_btn->callback(stop_cb, this);
+
+    res_time_chart = new SimplePlot(80, 70, 670, 180, "Resistance vs Time");
+    res_time_chart->set_bounds(0, 100);
     res_time_chart->set_line_color(FL_BLUE);
     res_time_chart->align(FL_ALIGN_TOP);
 
-    res_temp_chart = new SimplePlot(80, 80, 670, 180, "Resistencia vs Tiempo");
-    res_temp_chart->set_bounds(0, 150);
+    res_temp_chart = new SimplePlot(80, 290, 670, 180, "Resistance vs Temperature");
+    res_temp_chart->set_bounds(0, 100);
     res_temp_chart->set_line_color(FL_BLUE);
     res_temp_chart->align(FL_ALIGN_TOP);
 
@@ -41,29 +47,72 @@ void LabInterface::show() {
 
 // --- CALLBACKS ---
 
-void start_stop_cb(Fl_Widget* w, void* data) {
+void start_continue_cb(Fl_Widget* w, void* data) {
+    LabInterface* ui = (LabInterface*)data;
+    Fl_Button* btn = (Fl_Button*)w;
+    Measurement* meas = ui->engine;
+
+    // Get the current label to decide the next state
+    std::string currentState = btn->label();
+
+    if (currentState == "START") {
+        ui->stop_btn->activate(); // <--- Enable the STOP button
+        ui->stop_btn->color(FL_RED);
+        ui->stop_btn->redraw();
+
+        ui->file_input->deactivate();
+        ui->time_input->deactivate();
+    }
+
+    if (currentState == "START" || currentState == "CONTINUE") {
+        // ACTION: Start or Resume the simulation
+        if (meas->start(ui->file_input->value())) {
+            btn->label("PAUSE");
+            btn->color(FL_YELLOW); 
+            
+            // Start the timer loop (1.0s or user defined interval)
+            double interval = ui->time_input->value();
+            if (interval <= 0) interval = 1.0; 
+            Fl::add_timeout(interval, timer_cb, ui);
+        }
+    } 
+    else if (currentState == "PAUSE") {
+        // ACTION: Pause the simulation
+        meas->stop(); // Assuming your logic handles pausing via stop()
+        btn->label("CONTINUE");
+        btn->color(FL_GREEN);
+        
+        // Stop the background updates
+        Fl::remove_timeout(timer_cb, ui);
+    }
+    
+    btn->redraw();
+}
+
+void stop_cb(Fl_Widget* w, void* data) {
     LabInterface* ui = (LabInterface*)data;
     Measurement* meas = ui->engine;
 
-    if (!meas->isRunning()) {
-        // Start the simulation
-        if (meas->start(ui->file_input->value())) {
-            ui->start_btn->label("STOP");
-            ui->start_btn->color(FL_RED);
-            ui->start_btn->redraw();
-            
-            // Start the timer loop
-            Fl::add_timeout(ui->time_input->value(), timer_cb, ui);
-        }
-    } else {
-        // Stop the simulation
-        meas->stop();
-        ui->start_btn->label("START");
-        ui->start_btn->color(FL_GREEN);
-        ui->start_btn->redraw();
-        
-        Fl::remove_timeout(timer_cb, ui);
-    }
+    // 1. Stop the measurement and timer immediately
+    meas->stop();
+    Fl::remove_timeout(timer_cb, ui);
+
+    // 2. Show the Success Pop-up
+    // This function blocks execution until the user clicks "OK"
+    fl_message("Measurement completed successfully and data has been logged.");
+
+    // 3. Reset the Charts (Empty the graphs)
+    ui->res_time_chart->clear_data();
+    ui->res_temp_chart->clear_data();
+
+    // 4. Reset the START button
+    ui->start_btn->label("START");
+    ui->start_btn->color(FL_GREEN);
+    ui->start_btn->redraw();
+
+    ui->stop_btn->deactivate();
+    ui->file_input->activate();
+    ui->time_input->activate();
 }
 
 void timer_cb(void* data) {
@@ -77,12 +126,15 @@ void timer_cb(void* data) {
 
     // Update the visual charts
     ui->res_time_chart->add_point(d.resistance);
-    ui->res_temp_chart->add_point(d.resistance);
+    ui->res_temp_chart->add_point(d.temp);
 
     // Force redraw to show new points
     ui->res_time_chart->redraw();
     ui->res_temp_chart->redraw();
 
     // Schedule next run based on user input
-    Fl::repeat_timeout(ui->time_input->value(), timer_cb, ui);
+    double interval = ui->time_input->value();
+    if (interval <= 0.05) interval = 0.5; // Safety floor
+    
+    Fl::repeat_timeout(interval, timer_cb, ui);
 }
