@@ -1,23 +1,27 @@
 # --- COMPILER SETTINGS ---
+# Cross-compiler for 32-bit Windows
 CXX = i686-w64-mingw32-g++
 
 # --- PATHS & BITS ---
 INCLUDES = -I. 
 LIB_PATHS = -L./lib -L.
-LIBS = -lieee_32m -lfltk -lole32 -luuid -lcomctl32 -lgdi32 -lws2_32
+
+# --- UPDATED LIBRARIES ---
+# Added -lfltk_gl, -lopengl32, and -lglu32 for Multiplot support
+LIBS = -lfltk_gl -lfltk -lopengl32 -lglu32 -lole32 -luuid -lcomctl32 -lgdi32 -lws2_32
 
 # --- COMPILER & LINKER FLAGS ---
-# Keep the Windows XP compatibility flags
-CXXFLAGS = -O2 -Wall $(INCLUDES) -static-libgcc -static-libstdc++
+# Windows XP compatibility: subsystem 5.1 is for XP 32-bit
+CXXFLAGS = -O2 -Wall $(INCLUDES) -DMULTIPLOT_FLTK -static-libgcc -static-libstdc++
 LDFLAGS = -mwindows -static -Wl,--subsystem,windows:5.1 $(LIB_PATHS) $(LIBS)
 
 # --- TARGETS & SOURCE FILES ---
 TARGET = resistometry.exe
 
-# List all your .cpp files here
-SRCS = main.cpp measurement.cpp ui.cpp
+# Ensure all source files are listed
+SRCS = main.cpp measurement.cpp ui.cpp simple_plot.cpp
 
-# This automatically creates a list of .o files from your .cpp files
+# Automatically create list of .o files
 OBJS = $(SRCS:.cpp=.o)
 
 # --- BUILD RULES ---

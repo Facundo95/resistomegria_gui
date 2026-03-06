@@ -1,12 +1,14 @@
 #include "ui.h"
 #include <iostream>
 #include <cstdio>
-#include <FL/fl_draw.H>
 #include <FL/fl_ask.H> // Required for fl_message
+#include "simple_plot.h"
 
 // Constructor: Setup the layout and widgets
 LabInterface::LabInterface(Measurement* meas) : engine(meas) {
     win = new Fl_Window(800, 500, "Resistometry Lab - XP Edition");
+
+    win->begin();
 
     // File Input
     file_input = new Fl_Input(80, 20, 150, 30, "Filename:");
@@ -28,15 +30,10 @@ LabInterface::LabInterface(Measurement* meas) : engine(meas) {
     stop_btn->deactivate();
     stop_btn->callback(stop_cb, this);
 
-    res_time_chart = new SimplePlot(80, 70, 670, 180, "Resistance vs Time");
-    res_time_chart->set_bounds(0, 100);
-    res_time_chart->set_line_color(FL_BLUE);
-    res_time_chart->align(FL_ALIGN_TOP);
+    // 2. Initialize Resistance vs Time Chart
+    res_time_chart = new SimplePlot(80, 100, 670, 180, "Resistance vs Time");
 
-    res_temp_chart = new SimplePlot(80, 290, 670, 180, "Resistance vs Temperature");
-    res_temp_chart->set_bounds(0, 100);
-    res_temp_chart->set_line_color(FL_BLUE);
-    res_temp_chart->align(FL_ALIGN_TOP);
+    res_temp_chart = new SimplePlot(80, 300, 670, 180, "Resistance vs Temperature");
 
     win->end();
 }
@@ -99,6 +96,7 @@ void stop_cb(Fl_Widget* w, void* data) {
 
     // 2. Show the Success Pop-up
     // This function blocks execution until the user clicks "OK"
+    fl_message_title("Lab System Notification");
     fl_message("Measurement completed successfully and data has been logged.");
 
     // 3. Reset the Charts (Empty the graphs)
@@ -124,13 +122,18 @@ void timer_cb(void* data) {
     // Get the next data point from the logic layer
     MeasurementData d = meas->nextStep();
 
+    static double elapsed_time = 0;
+    elapsed_time += ui->time_input->value();
+
     // Update the visual charts
-    ui->res_time_chart->add_point(d.resistance);
-    ui->res_temp_chart->add_point(d.temp);
+    ui->res_time_chart->add_point(elapsed_time, d.resistance);
+    ui->res_temp_chart->add_point(d.temp, d.resistance);
+
 
     // Force redraw to show new points
     ui->res_time_chart->redraw();
     ui->res_temp_chart->redraw();
+
 
     // Schedule next run based on user input
     double interval = ui->time_input->value();
