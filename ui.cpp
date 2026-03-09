@@ -6,7 +6,9 @@
 
 // Constructor: Setup the layout and widgets
 LabInterface::LabInterface(Measurement* meas) : engine(meas) {
-    win = new Fl_Window(800, 500, "Resistometry Lab - XP Edition");
+    win = new Fl_Window(800, 540, "Resistometry Lab - XP Edition");
+
+    win->set_modal();
 
     win->begin();
 
@@ -31,9 +33,15 @@ LabInterface::LabInterface(Measurement* meas) : engine(meas) {
     stop_btn->callback(stop_cb, this);
 
     // 2. Initialize Resistance vs Time Chart
-    res_time_chart = new SimplePlot(80, 100, 670, 180, "Resistance vs Time");
+    res_time_chart = new SimplePlot(100, 100, 650, 162.5, "Resistance vs Time");
+    res_time_chart->set_scale_factor(100.0); // Default scale
 
-    res_temp_chart = new SimplePlot(80, 300, 670, 180, "Resistance vs Temperature");
+    win->add(res_time_chart);
+
+    res_temp_chart = new SimplePlot(100, 340, 650, 162.5, "Resistance vs Temperature");
+    res_temp_chart->set_scale_factor(100.0); // Default scale
+
+    win->add(res_temp_chart);
 
     win->end();
 }
@@ -100,8 +108,8 @@ void stop_cb(Fl_Widget* w, void* data) {
     fl_message("Measurement completed successfully and data has been logged.");
 
     // 3. Reset the Charts (Empty the graphs)
-    ui->res_time_chart->clear_data();
-    ui->res_temp_chart->clear_data();
+    ui->res_time_chart->reset();
+    ui->res_temp_chart->reset();
 
     // 4. Reset the START button
     ui->start_btn->label("START");
@@ -126,8 +134,8 @@ void timer_cb(void* data) {
     elapsed_time += ui->time_input->value();
 
     // Update the visual charts
-    ui->res_time_chart->add_point(elapsed_time, d.resistance);
-    ui->res_temp_chart->add_point(d.temp, d.resistance);
+    ui->res_time_chart->add_data(elapsed_time, d.resistance);
+    ui->res_temp_chart->add_data(d.temp, d.resistance);
 
 
     // Force redraw to show new points

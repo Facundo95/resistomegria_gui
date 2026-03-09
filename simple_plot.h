@@ -1,31 +1,42 @@
 #ifndef SIMPLE_PLOT_H
 #define SIMPLE_PLOT_H
 
-#include <FL/Fl.H>
-#include <FL/gl.h>
-#include <FL/glut.H>
-#include <FL/Fl_Gl_Window.H>
+#include <FL/Fl_Chart.H>
 #include <vector>
+#include <string>
 
-struct PlotPoint {
-    double x, y;
-};
+struct Tick {
+        double value;
+        int pixel_pos;
+    };
 
-class SimplePlot : public Fl_Gl_Window {
+class SimplePlot : public Fl_Chart {
 private:
-    std::vector<PlotPoint> data;
-    double minX, maxX, minY, maxY;
-    int gridDivs;
+    std::vector<double> x_data;
+    std::vector<double> y_data;
+    double min_x, max_x, min_y, max_y;
+    double display_min_x, display_max_x; // For label drawing logic
+    std::string x_axis_label;
+    std::string y_axis_label;
+    std::vector<Tick> x_ticks;
+    std::vector<Tick> y_ticks;
+    double scale_factor;
+
+    void update_tick_calculations(); // Logic/Math
+    void draw_grid_lines();          // Visuals: Lines
+    void draw_tick_labels();         // Visuals: Numbers
 
 public:
     // This is the declaration of the constructor
     SimplePlot(int X, int Y, int W, int H, const char* L = 0);
 
     // Methods
+    void add_data(double x, double y);
+    void reset();
     void draw() override;
-    void add_point(double x, double y);
-    void clear_data();
-    void draw_labels(double minV, double maxV, bool isXAxis, double range);
+    void set_x_axis_label(const char* label) { x_axis_label = label;}
+    void set_y_axis_label(const char* label) { y_axis_label = label;}  
+    void set_scale_factor(double s) { scale_factor = s; redraw(); }
 };
 
 #endif
