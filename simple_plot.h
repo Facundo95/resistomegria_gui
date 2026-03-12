@@ -16,6 +16,7 @@ private:
     std::vector<double> y_data;
     double min_x, max_x, min_y, max_y;
     double display_min_x, display_max_x; // For label drawing logic
+    double display_min_y, display_max_y;
     std::string x_axis_label;
     std::string y_axis_label;
     std::vector<Tick> x_ticks;
@@ -24,6 +25,7 @@ private:
 
     void update_tick_calculations(); // Logic/Math
     void draw_grid_lines();          // Visuals: Lines
+    void draw_data_series();         // Visuals: Data line
     void draw_tick_labels();         // Visuals: Numbers
     void draw_axis_titles();         // Visuals: Axis titles
 

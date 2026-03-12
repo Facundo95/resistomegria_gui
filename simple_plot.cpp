@@ -10,10 +10,21 @@ namespace {
 double snap_tick_step(double range, int target_tick_count) {
     if (target_tick_count < 1) target_tick_count = 1;
 
-    double raw_step = range / static_cast<double>(target_tick_count);
-    if (raw_step <= 0.0) raw_step = 0.1;
+    if (range <= 0.0) return 1.0;
 
-    return std::max(0.1, std::ceil(raw_step / 0.1) * 0.1);
+    double raw_step = range / static_cast<double>(target_tick_count);
+    if (raw_step <= 0.0) raw_step = 1.0;
+
+    double magnitude = std::pow(10.0, std::floor(std::log10(raw_step)));
+    double normalized = raw_step / magnitude;
+
+    double nice_normalized = 1.0;
+    if (normalized <= 1.0) nice_normalized = 1.0;
+    else if (normalized <= 2.0) nice_normalized = 2.0;
+    else if (normalized <= 5.0) nice_normalized = 5.0;
+    else nice_normalized = 10.0;
+
+    return nice_normalized * magnitude;
 }
 
 double snap_down(double value, double step) {
@@ -68,6 +79,8 @@ void SimplePlot::reset() {
     max_y = -1e30;
     display_min_x = 0.0;
     display_max_x = 1.0;
+    display_min_y = 0.0;
+    display_max_y = 1.0;
     scale_factor = 1.0;
     bounds(0, 1); // Default initial view
 }
@@ -92,16 +105,15 @@ void SimplePlot::add_data(double x, double y) {
     double aspect_ratio = (double)w() / (double)h();
     double required_range_x = chart_range_y * aspect_ratio;
 
-    // 4. Keep the displayed X-axis starting from zero whenever possible
-    this->display_min_x = 0.0;
-    this->display_max_x = std::max(required_range_x, max_x);
+    // 4. Keep the displayed X-axis starting from the first data value
+    this->display_min_x = min_x;
+    this->display_max_x = std::max(display_min_x + required_range_x, max_x);
 
     // 5. Apply Y-bounds to Fl_Chart
     double chart_min_y = min_y - (data_range_y * 0.1);
     double chart_max_y = max_y + (data_range_y * 0.1);
     bounds(chart_min_y, chart_max_y);
     
-    add(y, "", FL_GREEN); 
     redraw();
     std::cout << "Added point: (" << x << ", " << y << ")\n";
 }
@@ -112,11 +124,19 @@ void SimplePlot::update_tick_calculations() {
 
     if (min_y >= 1e20) return;
 
-    // 1. Calculate Y-Range (with 10% padding)
+    // 1. Calculate Y-Range (with 10% padding), and keep view clipped to it
     double data_range_y = max_y - min_y;
-    if (data_range_y <= 0) data_range_y = 1.0; 
-    double d_min_y = min_y - (data_range_y * 0.1);
-    double d_max_y = max_y + (data_range_y * 0.1);
+    if (data_range_y <= 0.0) {
+        double base = std::max(std::abs(min_y), 1e-6);
+        data_range_y = base * 0.2;
+    }
+    double y_padding = data_range_y * 0.1;
+    double d_min_y = min_y - y_padding;
+    double d_max_y = max_y + y_padding;
+
+    display_min_y = d_min_y;
+    display_max_y = d_max_y;
+    bounds(display_min_y, display_max_y);
 
     // 2. Calculate Y-Ticks
     int num_y = h() / 40;
@@ -140,12 +160,14 @@ void SimplePlot::update_tick_calculations() {
         y_ticks.push_back(t);
     }
 
-    // 3. Calculate 1:1 X-Range based on Y-Range and Widget Aspect Ratio
+    // 3. Calculate 1:1 X-Range based on displayed Y-Range and widget aspect ratio
     double aspect_ratio = (double)w() / (double)h();
-    double required_range_x = (active_range_y * aspect_ratio) * scale_factor;
+    double display_range_y = display_max_y - display_min_y;
+    if (display_range_y <= 0.0) display_range_y = active_range_y;
+    double required_range_x = (display_range_y * aspect_ratio) * scale_factor;
 
-    this->display_min_x = 0.0;
-    this->display_max_x = std::max(required_range_x, max_x);
+    this->display_min_x = min_x;
+    this->display_max_x = std::max(display_min_x + required_range_x, max_x);
     double active_range_x = display_max_x - display_min_x;
 
     // 4. Calculate X-Ticks (matching the density of Y)
@@ -186,6 +208,39 @@ void SimplePlot::draw_grid_lines() {
         fl_line(x(), t.pixel_pos, x() + w(), t.pixel_pos);
     }
     fl_line_style(0);
+}
+
+void SimplePlot::draw_data_series() {
+    if (x_data.size() < 2 || y_data.size() < 2) return;
+
+    double range_x = display_max_x - display_min_x;
+    double range_y = display_max_y - display_min_y;
+    if (range_x <= 0.0 || range_y <= 0.0) return;
+
+    auto map_x = [&](double value) {
+        double normalized = (value - display_min_x) / range_x;
+        return x() + static_cast<int>(std::round(normalized * w()));
+    };
+
+    auto map_y = [&](double value) {
+        double normalized = (value - display_min_y) / range_y;
+        return y() + h() - static_cast<int>(std::round(normalized * h()));
+    };
+
+    fl_push_clip(x(), y(), w(), h());
+    fl_color(FL_GREEN);
+    fl_line_style(FL_SOLID, 2);
+
+    for (size_t i = 1; i < x_data.size(); ++i) {
+        int x1 = map_x(x_data[i - 1]);
+        int y1 = map_y(y_data[i - 1]);
+        int x2 = map_x(x_data[i]);
+        int y2 = map_y(y_data[i]);
+        fl_line(x1, y1, x2, y2);
+    }
+
+    fl_line_style(0);
+    fl_pop_clip();
 }
 
 void SimplePlot::draw_tick_labels() {
@@ -295,6 +350,7 @@ void SimplePlot::draw() {
     fl_rectf(x() - 20, y() + h() + 1, w() + 50, 80); // X area
 
     draw_grid_lines();
+    draw_data_series();
     draw_tick_labels();
     draw_axis_titles();
 
