@@ -81,8 +81,10 @@ void SimplePlot::reset() {
     display_max_x = 1.0;
     display_min_y = 0.0;
     display_max_y = 1.0;
+    x_ticks.clear();
+    y_ticks.clear();
     scale_factor = 1.0;
-    bounds(0, 1); // Default initial view
+    bounds(display_min_y, display_max_y); // Default initial view
 }
 
 void SimplePlot::add_data(double x, double y) {
@@ -122,7 +124,71 @@ void SimplePlot::update_tick_calculations() {
     x_ticks.clear();
     y_ticks.clear();
 
-    if (min_y >= 1e20) return;
+    if (x_data.empty() || y_data.empty()) {
+        double active_range_y = display_max_y - display_min_y;
+        if (active_range_y <= 0.0) {
+            display_min_y = 0.0;
+            display_max_y = 1.0;
+            active_range_y = 1.0;
+        }
+
+        bounds(display_min_y, display_max_y);
+
+        int num_y = h() / 40;
+        if (num_y < 2) num_y = 2;
+
+        double y_step = snap_tick_step(active_range_y, num_y);
+        double y_start = snap_down(display_min_y, y_step);
+        double y_end = snap_up(display_max_y, y_step);
+        active_range_y = y_end - y_start;
+        if (active_range_y <= 0.0) active_range_y = y_step;
+
+        int y_tick_count = static_cast<int>(std::round(active_range_y / y_step));
+        if (y_tick_count < 1) y_tick_count = 1;
+
+        for (int i = 0; i <= y_tick_count; ++i) {
+            double value = y_start + (y_step * i);
+            Tick t;
+            t.value = value;
+            double normalized = (value - y_start) / active_range_y;
+            t.pixel_pos = y() + h() - static_cast<int>(h() * normalized);
+            y_ticks.push_back(t);
+        }
+
+        double active_range_x = display_max_x - display_min_x;
+        if (active_range_x <= 0.0) {
+            display_min_x = 0.0;
+            display_max_x = 1.0;
+            active_range_x = 1.0;
+        }
+
+        double aspect_ratio = (double)w() / (double)h();
+        int num_x = (int)(num_y * aspect_ratio);
+        if (num_x < 2) num_x = 2;
+
+        double x_step = snap_tick_step(active_range_x, num_x);
+        double x_start = snap_down(display_min_x, x_step);
+        double x_end = snap_up(display_max_x, x_step);
+        active_range_x = x_end - x_start;
+        if (active_range_x <= 0.0) active_range_x = x_step;
+
+        int x_tick_count = static_cast<int>(std::round(active_range_x / x_step));
+        if (x_tick_count < 1) x_tick_count = 1;
+
+        display_min_x = x_start;
+        display_max_x = x_end;
+
+        for (int i = 0; i <= x_tick_count; ++i) {
+            double value = x_start + (x_step * i);
+            Tick t;
+            t.value = value;
+            double normalized = (value - x_start) / active_range_x;
+            t.pixel_pos = x() + static_cast<int>(w() * normalized);
+            x_ticks.push_back(t);
+        }
+
+        return;
+    }
 
     // 1. Calculate Y-Range (with 10% padding), and keep view clipped to it
     double data_range_y = max_y - min_y;
