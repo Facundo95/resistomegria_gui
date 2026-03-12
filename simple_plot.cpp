@@ -83,7 +83,7 @@ void SimplePlot::reset() {
     display_max_y = 1.0;
     x_ticks.clear();
     y_ticks.clear();
-    scale_factor = 1.0;
+    line_color = FL_BLUE;
     bounds(display_min_y, display_max_y); // Default initial view
 }
 
@@ -230,7 +230,7 @@ void SimplePlot::update_tick_calculations() {
     double aspect_ratio = (double)w() / (double)h();
     double display_range_y = display_max_y - display_min_y;
     if (display_range_y <= 0.0) display_range_y = active_range_y;
-    double required_range_x = (display_range_y * aspect_ratio) * scale_factor;
+    double required_range_x = (display_range_y * aspect_ratio);
 
     this->display_min_x = min_x;
     this->display_max_x = std::max(display_min_x + required_range_x, max_x);
@@ -294,7 +294,7 @@ void SimplePlot::draw_data_series() {
     };
 
     fl_push_clip(x(), y(), w(), h());
-    fl_color(FL_GREEN);
+    fl_color(line_color);
     fl_line_style(FL_SOLID, 2);
 
     for (size_t i = 1; i < x_data.size(); ++i) {
