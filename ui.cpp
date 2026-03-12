@@ -6,7 +6,7 @@
 
 // Constructor: Setup the layout and widgets
 LabInterface::LabInterface(Measurement* meas) : engine(meas) {
-    win = new Fl_Window(800, 540, "Resistometry Lab - XP Edition");
+    win = new Fl_Window(800, 580, "Resistometry Lab - XP Edition");
 
     win->set_modal();
 
@@ -35,11 +35,13 @@ LabInterface::LabInterface(Measurement* meas) : engine(meas) {
     // 2. Initialize Resistance vs Time Chart
     res_time_chart = new SimplePlot(100, 100, 650, 162.5, "Resistance vs Time");
     res_time_chart->set_scale_factor(100.0); // Default scale
+    res_time_chart->set_axis_titles("Time (s)", "Resistance");
 
     win->add(res_time_chart);
 
     res_temp_chart = new SimplePlot(100, 340, 650, 162.5, "Resistance vs Temperature");
     res_temp_chart->set_scale_factor(100.0); // Default scale
+    res_temp_chart->set_axis_titles("Temperature (°C)", "Resistance");
 
     win->add(res_temp_chart);
 

@@ -25,6 +25,7 @@ private:
     void update_tick_calculations(); // Logic/Math
     void draw_grid_lines();          // Visuals: Lines
     void draw_tick_labels();         // Visuals: Numbers
+    void draw_axis_titles();         // Visuals: Axis titles
 
 public:
     // This is the declaration of the constructor
@@ -34,8 +35,11 @@ public:
     void add_data(double x, double y);
     void reset();
     void draw() override;
-    void set_x_axis_label(const char* label) { x_axis_label = label;}
-    void set_y_axis_label(const char* label) { y_axis_label = label;}  
+    void set_x_axis_title(const char* title);
+    void set_y_axis_title(const char* title);
+    void set_axis_titles(const char* x_title, const char* y_title);
+    void set_x_axis_label(const char* label) { set_x_axis_title(label); }
+    void set_y_axis_label(const char* label) { set_y_axis_title(label); }
     void set_scale_factor(double s) { scale_factor = s; redraw(); }
 };
 
