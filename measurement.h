@@ -2,6 +2,7 @@
 #define MEASUREMENT_H
 
 #include <fstream>
+#include <string>
 
 struct MeasurementData {
     int n;
@@ -19,11 +20,18 @@ public:
     void stop();
     MeasurementData nextStep(); // Generates/Reads the next data point
     bool isRunning() const { return active; }
+    bool was_last_connection_successful() const { return last_connection_success; }
+    const std::string& get_last_status_message() const { return last_status_message; }
 
 private:
     std::ofstream salida;
     bool active;
     int step_count;
+    bool hardware_connected;
+    bool last_connection_success;
+    std::string last_status_message;
+    
+    bool connect_hardware();
 };
 
 #endif

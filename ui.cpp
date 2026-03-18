@@ -36,9 +36,11 @@ std::string make_unique_path(const std::string& full_path) {
 
 // Constructor: Setup the layout and widgets
 LabInterface::LabInterface(Measurement* meas) : engine(meas) {
-    win = new Fl_Window(900, 580, "Resistometry Lab - XP Edition");
+    int screen_w = Fl::w();
+    int screen_h = Fl::h();
 
-    win->set_modal();
+    win = new Fl_Window(screen_w, screen_h, "Resistometry Lab - XP Edition");
+    //win->callback(close_window_cb, this);
 
     win->begin();
 
@@ -57,16 +59,23 @@ LabInterface::LabInterface(Measurement* meas) : engine(meas) {
     time_input->value(1.0);
 
     // Start/Continue Button
-    start_btn = new Fl_Button(595, 20, 100, 30, "START");
+    start_btn = new Fl_Button(570, 20, 80, 30, "START");
     start_btn->color(FL_GREEN);
     
     // Connect the button to the callback, passing 'this' (the UI) as data
     start_btn->callback(start_continue_cb, this);
 
-    stop_btn = new Fl_Button(710, 20, 100, 30, "STOP");
+    stop_btn = new Fl_Button(670, 20, 80, 30, "STOP");
     stop_btn->color(FL_RED);
     stop_btn->deactivate();
     stop_btn->callback(stop_cb, this);
+
+    // Window controls
+    //minimize_btn = new Fl_Button(win_w - 90, 20, 30, 30, "_");
+    //minimize_btn->callback(minimize_cb, this);
+
+    //close_btn = new Fl_Button(win_w - 50, 20, 30, 30, "X");
+    //close_btn->callback(close_window_cb, this);
 
     // 2. Initialize Resistance vs Time Chart
     res_time_chart = new SimplePlot(100, 100, 650, 162.5, "Resistance vs Time");
@@ -129,6 +138,26 @@ void folder_select_cb(Fl_Widget* w, void* data) {
     }
 }
 
+void minimize_cb(Fl_Widget* w, void* data) {
+    (void)w;
+    LabInterface* ui = (LabInterface*)data;
+    ui->win->iconize();
+}
+
+void close_window_cb(Fl_Widget* w, void* data) {
+    (void)w;
+    LabInterface* ui = (LabInterface*)data;
+
+    if (ui && ui->engine) {
+        ui->engine->stop();
+        Fl::remove_timeout(timer_cb, ui);
+    }
+
+    if (ui && ui->win) {
+        ui->win->hide();
+    }
+}
+
 void start_continue_cb(Fl_Widget* w, void* data) {
     LabInterface* ui = (LabInterface*)data;
     Fl_Button* btn = (Fl_Button*)w;
@@ -136,6 +165,7 @@ void start_continue_cb(Fl_Widget* w, void* data) {
 
     // Get the current label to decide the next state
     std::string currentState = btn->label();
+    bool is_start_press = (currentState == "START");
 
     if (currentState == "START") {
         ui->stop_btn->activate(); // <--- Enable the STOP button
@@ -162,6 +192,11 @@ void start_continue_cb(Fl_Widget* w, void* data) {
         }
 
         if (meas->start(output_path.c_str())) {
+            if (is_start_press) {
+                fl_message_title("Hardware Status");
+                fl_message("%s", meas->get_last_status_message().c_str());
+            }
+
             btn->label("PAUSE");
             btn->color(FL_YELLOW); 
             
@@ -169,6 +204,15 @@ void start_continue_cb(Fl_Widget* w, void* data) {
             double interval = ui->time_input->value();
             if (interval <= 0) interval = 1.0; 
             Fl::add_timeout(interval, timer_cb, ui);
+        } else {
+            if (is_start_press) {
+                fl_alert("No fue posible iniciar la medicion.\n%s", meas->get_last_status_message().c_str());
+            }
+
+            ui->stop_btn->deactivate();
+            ui->file_input->activate();
+            ui->time_input->activate();
+            ui->folder_btn->activate();
         }
     } 
     else if (currentState == "PAUSE") {

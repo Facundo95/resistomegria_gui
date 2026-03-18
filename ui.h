@@ -23,6 +23,8 @@ public:
     Fl_Input       *file_input;
     Fl_Value_Input *time_input;
     Fl_Button      *folder_btn;
+    Fl_Button      *minimize_btn; // no los uso
+    Fl_Button      *close_btn; // no los uso
     Fl_Button      *start_btn;
     Fl_Button      *stop_btn;
 
@@ -36,6 +38,8 @@ public:
 // Callback helper
 void timer_cb(void* data);
 void folder_select_cb(Fl_Widget* w, void* data);
+void minimize_cb(Fl_Widget* w, void* data);
+void close_window_cb(Fl_Widget* w, void* data);
 void start_continue_cb(Fl_Widget* w, void* data);
 void stop_cb(Fl_Widget* w, void* data);
 
