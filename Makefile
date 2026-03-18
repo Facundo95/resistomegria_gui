@@ -6,9 +6,10 @@ CXX = i686-w64-mingw32-g++
 INCLUDES = -I. 
 LIB_PATHS = -L./lib -L.
 
-# --- UPDATED LIBRARIES ---
-# Added -lfltk_gl, -lopengl32, and -lglu32 for Multiplot support
-LIBS = -lfltk_gl -lfltk -lopengl32 -lglu32 -lole32 -luuid -lcomctl32 -lgdi32 -lws2_32
+# --- LINK LIBRARIES ---
+# Project usage: FLTK widgets + FLTK OpenGL context (Fl::gl_visual)
+# Keep required Win32 deps for static FLTK + native dialogs
+LIBS = -lfltk_gl -lfltk -lopengl32 -lole32 -luuid -lcomctl32 -lgdi32
 
 # --- COMPILER & LINKER FLAGS ---
 # Windows XP compatibility: subsystem 5.1 is for XP 32-bit
