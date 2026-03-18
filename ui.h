@@ -16,11 +16,13 @@ class LabInterface {
 public:
     LabInterface(Measurement* sim);
     void show();
+    std::string build_output_path() const;
     
     // UI Elements made public for easy access by callbacks
     Fl_Window      *win;
     Fl_Input       *file_input;
     Fl_Value_Input *time_input;
+    Fl_Button      *folder_btn;
     Fl_Button      *start_btn;
     Fl_Button      *stop_btn;
 
@@ -28,10 +30,12 @@ public:
     SimplePlot* res_temp_chart;
     
     Measurement* engine;
+    std::string save_folder;
 };
 
 // Callback helper
 void timer_cb(void* data);
+void folder_select_cb(Fl_Widget* w, void* data);
 void start_continue_cb(Fl_Widget* w, void* data);
 void stop_cb(Fl_Widget* w, void* data);
 
