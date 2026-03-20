@@ -16,7 +16,7 @@ bool Measurement::connect_hardware() {
     int tipo_de_interface = gpib_board_present();
     std::cout << "Tipo de KM-488 = " << tipo_de_interface << "\n";
     if (tipo_de_interface == 0) {
-        last_status_message = "No se detecto la interfaz GPIB KM-488.";
+        last_status_message = "No se detecto la interfaz GPIB KM-488. Prueba conectar los equipos y reiniciar la computadora.";
         std::cerr << last_status_message << "\n";
         return false;
     }
