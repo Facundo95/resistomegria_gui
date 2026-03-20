@@ -11,14 +11,13 @@
 
 Measurement::Measurement()
     : active(false), step_count(1), hardware_connected(false), last_connection_success(false),
-      sample_interval_seconds(1.0), configured_current_amp(1e-3), elapsed_time_seconds(0.0) {}
+      sample_interval_seconds(1.0), configured_current_amp(1e-1), elapsed_time_seconds(0.0) {}
 
-void Measurement::set_acquisition_params(double interval_seconds, double current_milliamp) {
+void Measurement::set_acquisition_params(double interval_seconds, double current_amp) {
     sample_interval_seconds = (interval_seconds > 0.0) ? interval_seconds : 1.0;
 
-    double current_amp = current_milliamp / 1000.0;
     if (current_amp < 0.0) current_amp = -current_amp;
-    configured_current_amp = (current_amp > 0.0) ? current_amp : 1e-6;
+    configured_current_amp = (current_amp > 0.0) ? current_amp : 1e-1;
 }
 
 bool Measurement::connect_hardware() {

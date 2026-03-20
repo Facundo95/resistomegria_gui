@@ -55,7 +55,7 @@ LabInterface::LabInterface(Measurement* meas) : engine(meas) {
     folder_btn->copy_tooltip(save_folder.c_str());
 
     // Current Input
-    current_input = new Fl_Value_Input(380, 20, 50, 30, "Current (mA):");
+    current_input = new Fl_Value_Input(380, 20, 50, 30, "Current (A):");
     current_input->value(1.0);
 
     // Interval Input
