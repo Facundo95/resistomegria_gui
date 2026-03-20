@@ -45,37 +45,34 @@ LabInterface::LabInterface(Measurement* meas) : engine(meas) {
     win->begin();
 
     // File Input
-    file_input = new Fl_Input(80, 20, 150, 30, "Filename:");
+    file_input = new Fl_Input(80, 20, 120, 30, "Filename:");
     file_input->value("data_log.csv");
 
     // Output folder selector
-    folder_btn = new Fl_Button(245, 20, 160, 30, "Select Folder");
+    folder_btn = new Fl_Button(220, 20, 60, 30, "Folder");
     folder_btn->callback(folder_select_cb, this);
     save_folder = ".";
     folder_btn->copy_tooltip(save_folder.c_str());
 
+    // Current Input
+    current_input = new Fl_Value_Input(380, 20, 50, 30, "Current (mA):");
+    current_input->value(1.0);
+
     // Interval Input
-    time_input = new Fl_Value_Input(500, 20, 50, 30, "Interval (s):");
+    time_input = new Fl_Value_Input(510, 20, 50, 30, "Interval (s):");
     time_input->value(1.0);
 
     // Start/Continue Button
-    start_btn = new Fl_Button(570, 20, 80, 30, "START");
+    start_btn = new Fl_Button(580, 20, 80, 30, "START");
     start_btn->color(FL_GREEN);
     
     // Connect the button to the callback, passing 'this' (the UI) as data
     start_btn->callback(start_continue_cb, this);
 
-    stop_btn = new Fl_Button(670, 20, 80, 30, "STOP");
+    stop_btn = new Fl_Button(680, 20, 80, 30, "STOP");
     stop_btn->color(FL_RED);
     stop_btn->deactivate();
     stop_btn->callback(stop_cb, this);
-
-    // Window controls
-    //minimize_btn = new Fl_Button(win_w - 90, 20, 30, 30, "_");
-    //minimize_btn->callback(minimize_cb, this);
-
-    //close_btn = new Fl_Button(win_w - 50, 20, 30, 30, "X");
-    //close_btn->callback(close_window_cb, this);
 
     // 2. Initialize Resistance vs Time Chart
     res_time_chart = new SimplePlot(100, 100, 650, 162.5, "Resistance vs Time");
@@ -132,29 +129,8 @@ void folder_select_cb(Fl_Widget* w, void* data) {
     int result = chooser.show();
     if (result == 0 && chooser.filename() && chooser.filename()[0] != '\0') {
         ui->save_folder = chooser.filename();
-        btn->label("Folder Selected");
         btn->copy_tooltip(ui->save_folder.c_str());
         btn->redraw();
-    }
-}
-
-void minimize_cb(Fl_Widget* w, void* data) {
-    (void)w;
-    LabInterface* ui = (LabInterface*)data;
-    ui->win->iconize();
-}
-
-void close_window_cb(Fl_Widget* w, void* data) {
-    (void)w;
-    LabInterface* ui = (LabInterface*)data;
-
-    if (ui && ui->engine) {
-        ui->engine->stop();
-        Fl::remove_timeout(timer_cb, ui);
-    }
-
-    if (ui && ui->win) {
-        ui->win->hide();
     }
 }
 
@@ -173,6 +149,7 @@ void start_continue_cb(Fl_Widget* w, void* data) {
         ui->stop_btn->redraw();
 
         ui->file_input->deactivate();
+        ui->current_input->deactivate();
         ui->time_input->deactivate();
         ui->folder_btn->deactivate();
     }
@@ -213,6 +190,7 @@ void start_continue_cb(Fl_Widget* w, void* data) {
             ui->file_input->activate();
             ui->time_input->activate();
             ui->folder_btn->activate();
+            ui->current_input->activate();
         }
     } 
     else if (currentState == "PAUSE") {
@@ -254,6 +232,7 @@ void stop_cb(Fl_Widget* w, void* data) {
     ui->file_input->activate();
     ui->time_input->activate();
     ui->folder_btn->activate();
+    ui->current_input->activate();
 }
 
 void timer_cb(void* data) {

@@ -22,9 +22,8 @@ public:
     Fl_Window      *win;
     Fl_Input       *file_input;
     Fl_Value_Input *time_input;
+    Fl_Value_Input *current_input;
     Fl_Button      *folder_btn;
-    Fl_Button      *minimize_btn; // no los uso
-    Fl_Button      *close_btn; // no los uso
     Fl_Button      *start_btn;
     Fl_Button      *stop_btn;
 
