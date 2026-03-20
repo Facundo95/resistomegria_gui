@@ -16,7 +16,10 @@ struct MeasurementData {
 class Measurement {
 public:
     Measurement();
+    void set_acquisition_params(double interval_seconds, double current_milliamp);
     bool start(const char* filename);
+    bool resume();
+    void pause();
     void stop();
     MeasurementData nextStep(); // Generates/Reads the next data point
     bool isRunning() const { return active; }
@@ -30,8 +33,12 @@ private:
     bool hardware_connected;
     bool last_connection_success;
     std::string last_status_message;
+    double sample_interval_seconds;
+    double configured_current_amp;
+    double elapsed_time_seconds;
     
     bool connect_hardware();
+    MeasurementData perform_measurement_cycle();
 };
 
 #endif

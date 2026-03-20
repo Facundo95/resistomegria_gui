@@ -1,13 +1,25 @@
 #include "measurement.h"
 #include <cmath>
 #include <iostream>
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
 
 #ifdef ENABLE_IEEE_HARDWARE
 #include "IEEE-C.H"
 #endif
 
 Measurement::Measurement()
-    : active(false), step_count(1), hardware_connected(false), last_connection_success(false) {}
+    : active(false), step_count(1), hardware_connected(false), last_connection_success(false),
+      sample_interval_seconds(1.0), configured_current_amp(1e-3), elapsed_time_seconds(0.0) {}
+
+void Measurement::set_acquisition_params(double interval_seconds, double current_milliamp) {
+    sample_interval_seconds = (interval_seconds > 0.0) ? interval_seconds : 1.0;
+
+    double current_amp = current_milliamp / 1000.0;
+    if (current_amp < 0.0) current_amp = -current_amp;
+    configured_current_amp = (current_amp > 0.0) ? current_amp : 1e-6;
+}
 
 bool Measurement::connect_hardware() {
 #ifdef ENABLE_IEEE_HARDWARE
@@ -78,11 +90,38 @@ bool Measurement::start(const char* filename) {
         salida << "N\tt(s)\tT(C)\ti(A)\tV(V)\tR(Ohms)\n";
         active = true;
         step_count = 1;
+        elapsed_time_seconds = 0.0;
         return true;
     }
 
     last_status_message = "No se pudo abrir el archivo de salida.";
     return false;
+}
+
+bool Measurement::resume() {
+    if (!hardware_connected) {
+        hardware_connected = connect_hardware();
+        last_connection_success = hardware_connected;
+        if (!hardware_connected) return false;
+    }
+
+    if (!salida.is_open()) {
+        last_status_message = "No hay un archivo de salida abierto para continuar.";
+        return false;
+    }
+
+    active = true;
+    last_connection_success = true;
+    return true;
+}
+
+void Measurement::pause() {
+    active = false;
+
+#ifdef ENABLE_IEEE_HARDWARE
+    long int status = 0;
+    send(12, "sour:clear:imm", &status);
+#endif
 }
 
 void Measurement::stop() {
@@ -96,14 +135,54 @@ void Measurement::stop() {
     if (salida.is_open()) salida.close();
 }
 
-MeasurementData Measurement::nextStep() {
+MeasurementData Measurement::perform_measurement_cycle() {
     MeasurementData d;
     d.n = step_count++;
-    d.time = d.n * 2.0;
+    elapsed_time_seconds += sample_interval_seconds;
+    d.time = elapsed_time_seconds;
+
+#ifdef ENABLE_IEEE_HARDWARE
+    long int status = 0;
+    int len = 0;
+
+    char order[64];
+    char voltage_ch[32];
+    char temp_ch[32];
+    double voltage_pos = 0.0;
+    double voltage_neg = 0.0;
+
+    std::snprintf(order, sizeof(order), "sour:curr:ampl %.9g", configured_current_amp);
+    send(12, order, &status);
+    send(7, "sens:chan 1; :read?", &status);
+    send(16, ":read?", &status);
+    enter(voltage_ch, 32, &len, 7, &status);
+    enter(temp_ch, 32, &len, 16, &status);
+    voltage_pos = std::atof(voltage_ch);
+
+    std::snprintf(order, sizeof(order), "sour:curr:ampl %.9g", -configured_current_amp);
+    send(12, order, &status);
+    send(7, "sens:chan 1; :read?", &status);
+    send(16, ":read?", &status);
+    enter(voltage_ch, 32, &len, 7, &status);
+    enter(temp_ch, 32, &len, 16, &status);
+    voltage_neg = std::atof(voltage_ch);
+
+    d.current = configured_current_amp;
+    d.temp = std::atof(temp_ch);
+    d.voltage = (voltage_neg - voltage_pos) / 2.0;
+    d.resistance = std::fabs(d.voltage / configured_current_amp);
+#else
     d.temp = 25.0 + (d.n * 0.1);
-    d.current = 0.1;
+    d.current = configured_current_amp;
     d.resistance = 0.012 + (d.n * 0.0001);
-    d.voltage = d.resistance * d.current;
+    d.voltage = d.resistance * configured_current_amp;
+#endif
+
+    return d;
+}
+
+MeasurementData Measurement::nextStep() {
+    MeasurementData d = perform_measurement_cycle();
 
     if (salida.is_open()) {
         salida << d.n << "\t" << d.time << "\t" << d.temp << "\t" 

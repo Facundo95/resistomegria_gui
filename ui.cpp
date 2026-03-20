@@ -40,7 +40,7 @@ LabInterface::LabInterface(Measurement* meas) : engine(meas) {
     int screen_h = Fl::h();
 
     win = new Fl_Window(screen_w, screen_h, "Resistometry Lab - XP Edition");
-    //win->callback(close_window_cb, this);
+    win->callback(close_window_cb, this);
 
     win->begin();
 
@@ -134,6 +134,21 @@ void folder_select_cb(Fl_Widget* w, void* data) {
     }
 }
 
+void close_window_cb(Fl_Widget* w, void* data) {
+    LabInterface* ui = (LabInterface*)data;
+    Measurement* meas = ui->engine;
+
+    std::string start_label = ui->start_btn->label() ? ui->start_btn->label() : "";
+    bool measurement_paused = (start_label == "CONTINUE");
+
+    if (meas->isRunning() || measurement_paused) {
+        fl_alert("Please stop the measurement before closing the window.");
+        return;
+    }
+
+    ((Fl_Window*)w)->hide();
+}
+
 void start_continue_cb(Fl_Widget* w, void* data) {
     LabInterface* ui = (LabInterface*)data;
     Fl_Button* btn = (Fl_Button*)w;
@@ -156,30 +171,41 @@ void start_continue_cb(Fl_Widget* w, void* data) {
 
     if (currentState == "START" || currentState == "CONTINUE") {
         // ACTION: Start or Resume the simulation
-        std::string entered_name = ui->file_input->value() ? ui->file_input->value() : "";
-        std::string output_path = ui->build_output_path();
+        double interval = ui->time_input->value();
+        if (interval <= 0) interval = 1.0;
+        double current_mA = ui->current_input->value();
+        meas->set_acquisition_params(interval, current_mA);
 
-        // Reflect the final (possibly renamed) target in the input box
-        if (entered_name.find('/') == std::string::npos && entered_name.find('\\') == std::string::npos) {
-            size_t slash_pos = output_path.find_last_of("/\\");
-            std::string final_name = (slash_pos == std::string::npos) ? output_path : output_path.substr(slash_pos + 1);
-            ui->file_input->value(final_name.c_str());
+        bool started_ok = false;
+        if (currentState == "START") {
+            std::string entered_name = ui->file_input->value() ? ui->file_input->value() : "";
+            std::string output_path = ui->build_output_path();
+
+            if (entered_name.find('/') == std::string::npos && entered_name.find('\\') == std::string::npos) {
+                size_t slash_pos = output_path.find_last_of("/\\");
+                std::string final_name = (slash_pos == std::string::npos) ? output_path : output_path.substr(slash_pos + 1);
+                ui->file_input->value(final_name.c_str());
+            } else {
+                ui->file_input->value(output_path.c_str());
+            }
+
+            started_ok = meas->start(output_path.c_str());
         } else {
-            ui->file_input->value(output_path.c_str());
+            started_ok = meas->resume();
         }
 
-        if (meas->start(output_path.c_str())) {
+        if (started_ok) {
             if (is_start_press) {
                 fl_message_title("Hardware Status");
                 fl_message("%s", meas->get_last_status_message().c_str());
             }
 
+            ui->time_input->deactivate();
+
             btn->label("PAUSE");
             btn->color(FL_YELLOW); 
             
             // Start the timer loop (1.0s or user defined interval)
-            double interval = ui->time_input->value();
-            if (interval <= 0) interval = 1.0; 
             Fl::add_timeout(interval, timer_cb, ui);
         } else {
             if (is_start_press) {
@@ -195,9 +221,11 @@ void start_continue_cb(Fl_Widget* w, void* data) {
     } 
     else if (currentState == "PAUSE") {
         // ACTION: Pause the simulation
-        meas->stop(); // Assuming your logic handles pausing via stop()
+        meas->pause();
         btn->label("CONTINUE");
         btn->color(FL_GREEN);
+
+        ui->time_input->activate();
         
         // Stop the background updates
         Fl::remove_timeout(timer_cb, ui);
@@ -244,11 +272,8 @@ void timer_cb(void* data) {
     // Get the next data point from the logic layer
     MeasurementData d = meas->nextStep();
 
-    static double elapsed_time = 0;
-    elapsed_time += ui->time_input->value();
-
     // Update the visual charts
-    ui->res_time_chart->add_data(elapsed_time, d.resistance);
+    ui->res_time_chart->add_data(d.time, d.resistance);
     ui->res_temp_chart->add_data(d.temp, d.resistance);
 
 
