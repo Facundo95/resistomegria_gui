@@ -57,7 +57,7 @@ bool Measurement::connect_hardware() {
     send(7, "SENS:FUNC 'VOLT'", &status);
     send(16, ":SENS:FUNC 'TEMP'", &status);
     send(16, ":SENS:TEMP:TC:TYPE k", &status);
-    send(16, "temp:tc:rjun:rsel sim 0", &status);
+    send(16, "SENS:TEMP:TC:RJUN:RSEL SIM 0", &status);
     send(12, "outp on", &status);
 
     last_status_message = "Dispositivos conectados correctamente.";
