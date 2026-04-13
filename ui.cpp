@@ -3,6 +3,11 @@
 #include <cstdio>
 #include <fstream>
 #include <algorithm>
+#include <cerrno>
+#include <sys/stat.h>
+#ifdef _WIN32
+#include <direct.h>
+#endif
 #include <FL/fl_ask.H> // Required for fl_message
 #include <FL/Fl_Native_File_Chooser.H>
 #include "simple_plot.h"
@@ -16,6 +21,23 @@ constexpr double kMaxIntervalS = 3600.0;
 bool file_exists(const std::string& path) {
     std::ifstream f(path.c_str());
     return f.good();
+}
+
+bool directory_exists(const std::string& path) {
+    struct stat info;
+    return stat(path.c_str(), &info) == 0 && (info.st_mode & S_IFDIR);
+}
+
+bool ensure_directory_exists(const std::string& path) {
+    if (path.empty()) return false;
+    if (directory_exists(path)) return true;
+
+#ifdef _WIN32
+    int rc = _mkdir(path.c_str());
+#else
+    int rc = mkdir(path.c_str(), 0755);
+#endif
+    return rc == 0 || errno == EEXIST;
 }
 
 std::string make_unique_path(const std::string& full_path) {
@@ -74,7 +96,10 @@ LabInterface::LabInterface(Measurement* meas) : engine(meas) {
     // Output folder selector
     folder_btn = new Fl_Button(220, 20, 60, 30, "Folder");
     folder_btn->callback(folder_select_cb, this);
-    save_folder = ".";
+    save_folder = "Results";
+    if (!ensure_directory_exists(save_folder)) {
+        save_folder = ".";
+    }
     folder_btn->copy_tooltip(save_folder.c_str());
 
     folder_label = new Fl_Box(220, 55, 200, 20);
