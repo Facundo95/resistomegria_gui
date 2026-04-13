@@ -42,6 +42,19 @@ std::string make_unique_path(const std::string& full_path) {
 double clamp_to_range(double value, double min_value, double max_value) {
     return std::clamp(value, min_value, max_value);
 }
+
+std::string folder_display_name(const std::string& path) {
+    if (path.empty()) return "(none)";
+
+    size_t end = path.find_last_not_of("/\\");
+    if (end == std::string::npos) return path;
+
+    std::string trimmed = path.substr(0, end + 1);
+    size_t slash_pos = trimmed.find_last_of("/\\");
+    if (slash_pos == std::string::npos) return trimmed;
+
+    return trimmed.substr(slash_pos + 1);
+}
 }
 
 // Constructor: Setup the layout and widgets
@@ -63,6 +76,11 @@ LabInterface::LabInterface(Measurement* meas) : engine(meas) {
     folder_btn->callback(folder_select_cb, this);
     save_folder = ".";
     folder_btn->copy_tooltip(save_folder.c_str());
+
+    folder_label = new Fl_Box(220, 55, 200, 20);
+    std::string initial_folder_text = "Folder: " + folder_display_name(save_folder);
+    folder_label->copy_label(initial_folder_text.c_str());
+    folder_label->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
 
     // Current Input
     current_input = new Fl_Value_Input(380, 20, 50, 30, "Current (mA):");
@@ -146,6 +164,9 @@ void folder_select_cb(Fl_Widget* w, void* data) {
     if (result == 0 && chooser.filename() && chooser.filename()[0] != '\0') {
         ui->save_folder = chooser.filename();
         btn->copy_tooltip(ui->save_folder.c_str());
+        std::string folder_text = "Folder: " + folder_display_name(ui->save_folder);
+        ui->folder_label->copy_label(folder_text.c_str());
+        ui->folder_label->redraw();
         btn->redraw();
     }
 }

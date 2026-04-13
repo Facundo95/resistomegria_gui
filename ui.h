@@ -6,6 +6,7 @@
 #include <FL/Fl_Input.H>
 #include <FL/Fl_Value_Input.H>
 #include <FL/Fl_Button.H>
+#include <FL/Fl_Box.H>
 #include <vector>
 #include <string>
 #include "measurement.h"
@@ -24,6 +25,7 @@ public:
     Fl_Value_Input *time_input;
     Fl_Value_Input *current_input;
     Fl_Button      *folder_btn;
+    Fl_Box         *folder_label;
     Fl_Button      *start_btn;
     Fl_Button      *stop_btn;
 
