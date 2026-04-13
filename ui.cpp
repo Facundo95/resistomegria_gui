@@ -84,10 +84,10 @@ LabInterface::LabInterface(Measurement* meas) : engine(meas) {
 
     // Current Input
     current_input = new Fl_Value_Input(380, 20, 50, 30, "Current (mA):");
-    current_input->value(0.1);
+    current_input->value(100.0);
     current_input->minimum(kMinCurrentA);
     current_input->maximum(kMaxCurrentA);
-    current_input->step(0.001);
+    current_input->step(0.5);
 
     // Interval Input
     time_input = new Fl_Value_Input(510, 20, 50, 30, "Interval (s):");
