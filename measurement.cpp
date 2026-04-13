@@ -86,7 +86,7 @@ bool Measurement::start(const char* filename) {
 
     salida.open(filename);
     if (salida.is_open()) {
-        salida << "N\tt(s)\tT(C)\ti(A)\tV(V)\tR(Ohms)\n";
+        salida << "N,time(s),temp(C),current(A),voltage(V),resistance(Ohms)\n";
         active = true;
         step_count = 1;
         elapsed_time_seconds = 0.0;
@@ -184,8 +184,8 @@ MeasurementData Measurement::nextStep() {
     MeasurementData d = perform_measurement_cycle();
 
     if (salida.is_open()) {
-        salida << d.n << "\t" << d.time << "\t" << d.temp << "\t" 
-               << d.current << "\t" << d.voltage << "\t" << d.resistance << "\n";
+        salida << d.n << "," << d.time << "," << d.temp << "," 
+               << d.current << "," << d.voltage << "," << d.resistance << "\n";
         salida.flush();
     }
     return d;
