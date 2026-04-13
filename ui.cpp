@@ -2,11 +2,17 @@
 #include <iostream>
 #include <cstdio>
 #include <fstream>
+#include <algorithm>
 #include <FL/fl_ask.H> // Required for fl_message
 #include <FL/Fl_Native_File_Chooser.H>
 #include "simple_plot.h"
 
 namespace {
+constexpr double kMinCurrentA = 1.0;
+constexpr double kMaxCurrentA = 100.0;
+constexpr double kMinIntervalS = 0.05;
+constexpr double kMaxIntervalS = 3600.0;
+
 bool file_exists(const std::string& path) {
     std::ifstream f(path.c_str());
     return f.good();
@@ -32,6 +38,10 @@ std::string make_unique_path(const std::string& full_path) {
 
     return candidate;
 }
+
+double clamp_to_range(double value, double min_value, double max_value) {
+    return std::clamp(value, min_value, max_value);
+}
 }
 
 // Constructor: Setup the layout and widgets
@@ -55,12 +65,18 @@ LabInterface::LabInterface(Measurement* meas) : engine(meas) {
     folder_btn->copy_tooltip(save_folder.c_str());
 
     // Current Input
-    current_input = new Fl_Value_Input(380, 20, 50, 30, "Current (A):");
-    current_input->value(1.0);
+    current_input = new Fl_Value_Input(380, 20, 50, 30, "Current (mA):");
+    current_input->value(0.1);
+    current_input->minimum(kMinCurrentA);
+    current_input->maximum(kMaxCurrentA);
+    current_input->step(0.001);
 
     // Interval Input
     time_input = new Fl_Value_Input(510, 20, 50, 30, "Interval (s):");
     time_input->value(1.0);
+    time_input->minimum(kMinIntervalS);
+    time_input->maximum(kMaxIntervalS);
+    time_input->step(0.05);
 
     // Start/Continue Button
     start_btn = new Fl_Button(580, 20, 80, 30, "START");
@@ -171,9 +187,13 @@ void start_continue_cb(Fl_Widget* w, void* data) {
 
     if (currentState == "START" || currentState == "CONTINUE") {
         // ACTION: Start or Resume the simulation
-        double interval = ui->time_input->value();
-        if (interval <= 0) interval = 1.0;
-        double current_mA = ui->current_input->value();
+        double interval = clamp_to_range(ui->time_input->value(), kMinIntervalS, kMaxIntervalS);
+        ui->time_input->value(interval);
+
+        double current_A = clamp_to_range(ui->current_input->value(), kMinCurrentA, kMaxCurrentA);
+        ui->current_input->value(current_A);
+        double current_mA = current_A * 1e-3; // Convert to milliamps for the logic layer
+
         meas->set_acquisition_params(interval, current_mA);
 
         bool started_ok = false;
@@ -283,8 +303,8 @@ void timer_cb(void* data) {
 
 
     // Schedule next run based on user input
-    double interval = ui->time_input->value();
-    if (interval <= 0.05) interval = 0.5; // Safety floor
+    double interval = clamp_to_range(ui->time_input->value(), kMinIntervalS, kMaxIntervalS);
+    ui->time_input->value(interval);
     
     Fl::repeat_timeout(interval, timer_cb, ui);
 }
